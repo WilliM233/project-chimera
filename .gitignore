@@ -1,0 +1,22 @@
+# Generated / rebuildable
+Binaries/
+Intermediate/
+DerivedDataCache/
+Saved/
+Build/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.sln
+*.slnx
+*.suo
+*.opensdf
+*.sdf
+*.VC.db
+*.VC.opendb
+
+# OS noise
+.DS_Store
+Thumbs.db
