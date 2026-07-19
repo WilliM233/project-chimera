@@ -11,8 +11,9 @@
 | Engine target | UE 5.8 |
 | Project template | Blank, C++, no starter content |
 | Version control | Git + Git LFS, command-line driven (manual-seams) |
-| Repo layout | Repo root > `Chimera/` (project) + `docs/` (standing documents) |
 | Run started | 2026-07-18 |
+| Studio name (fiction) | Flux Meridian |
+| Copyright line | `Copyright 2026 Flux Meridian. All Rights Reserved.` |
 
 ## Standing documents
 
@@ -20,59 +21,52 @@
 |---|---|
 | `0.0-toc.md` | 43-concept spine, slug-based, UE 5.8 target |
 | `0.1-voices.md` | Voice A (org memo) / B (mentor) / C (reference) |
-| `0.2-ticket-schema.md` | Framework ticket schema |
-| `0.3-references.md` | This document — live pointers; canonical copy in repo `docs/` |
-| Concept ledger | Not yet born — minted at first ticket close-out |
+| `0.2-ticket-schema.md` | Framework ticket schema — ⚠ not currently in project knowledge |
+| `0.3-references.md` | This document — live pointers |
+| `0.4-concept-ledger.md` | Concept ledger — born 2026-07-19 at first formal close-out |
+| `0.5-design.md` | The learner's game — vision, locked decisions, deferred ambitions |
 
 ## Chapter log
 
-| # | Slug(s) | Status | Notes |
+| # | Slug(s) | Status | Gate |
 |---|---|---|---|
-| 1 | foundation.project-setup + foundation.version-control | **Closed** 2026-07-18 | Blended chapter; `.slnx` leak caught & fixed; first-commit rule executed |
-| 2 | foundation.editor + foundation.viewport | **Closed** 2026-07-18 | Compressed — learner has prior editor familiarity (self-assessed upper beginner) |
-| 3 | framework.actors | **Closed** 2026-07-18 | Sandbox furnished; brush→static-mesh conversion; asset naming conventions |
-| 4 | framework.components | **Closed** 2026-07-18 | Composite lamp post built by hand; component tree literacy; relative transforms |
-| 5 | framework.actor-lifecycle | **Next** | Opens with memo next session; first C++ chapter; meatier — flagged to start fresh |
+| 1 | foundation.install + version-control + project-setup | Closed 2026-07-18 | loose |
+| 2 | foundation.editor + foundation.viewport | Closed 2026-07-18 (compressed — prior familiarity) | loose |
+| 3 | framework.actors | Closed 2026-07-19 | loose |
+| 4 | framework.components | Closed 2026-07-18 | loose |
+| 5 | framework.actor-lifecycle | Closed 2026-07-19 | **formal DoD — first** |
+| 6 | framework.pawns-controllers | Closed 2026-07-19 | formal DoD |
+| 7 | framework.gamemode | Closed 2026-07-19 — **Part II complete** | formal DoD |
+| 8 | scripting.blueprints | Next up — opens Part III | — |
 
-*Note: run opened loose — chapters delivered conversationally rather than as
-GitHub-ticketed chapters. Structure to be adopted through use, not upfront.*
-
-## Project decisions log
-
-- **Sandbox-first**: default Open World map rejected for prototyping; flat Basic-template
-  level `Content/Maps/Sandbox.umap` created and set as both Editor Startup Map and
-  Game Default Map (written to `Config/DefaultEngine.ini`)
-- **Content taxonomy started**: `Content/Maps/` for levels, `Content/Meshes/` for meshes —
-  folders minted as needed, one at a time
-- **Brush geometry avoided**: BSP brushes converted to static meshes when encountered;
-  primitives preferred for blockout
-- **Naming discipline**: actors named for role in scene (`Ramp_10d`, `LampPost_1`);
-  assets named by type prefix (`SM_Stairs_Sandbox`); Outliner organized with folders
+*Run opened loose — early chapters delivered conversationally. First formal
+Definition-of-Done gate passed at actor-lifecycle; ledger minted there.
+Structure being adopted through use, as designed.*
 
 ## Key technical references established
 
-- `.gitignore` and `.gitattributes` for Unreal — canonical copies in learner repo root
-- Ignore list: `Binaries/ Intermediate/ DerivedDataCache/ Saved/ Build/` + IDE/OS noise
-  + **`*.slnx`** (5.8-era VS solution format — engine-version drift caught in the field)
-- LFS tracks: `*.uasset *.umap` + raw binary imports (`*.fbx *.png *.wav`) — verified
-  working twice (`Sandbox.umap`, `SM_Stairs_Sandbox.uasset`)
-- First-commit rule: ignore/attributes files committed alone, before any content
-- Path note: Git commands run from repo root; project paths prefixed `Chimera/`
-- Diagnostic tools taught: `git check-ignore -v`, `git lfs ls-files`, `git status --ignored`
-- Unreal path conventions: `/Game/` = project `Content/`; `Package.ObjectName` format
-- Asset prefix convention: `SM_ SK_ M_ MI_ T_ BP_ WBP_ A_/AM_`
-- Component hierarchy: `UActorComponent` (logic) → `USceneComponent` (+transform) →
-  `UPrimitiveComponent` (+geometry/collision)
-- Editor snapping: no native nudge key; snap-drag workflow, `Ctrl+End` snap-to-grid,
-  `End` snap-to-floor, `V` vertex snapping
+- `.gitignore` / `.gitattributes` canonical copies in learner repo root;
+  ignore list `Binaries/ Intermediate/ DerivedDataCache/ Saved/ Build/` + IDE/OS
+  noise; LFS tracks `*.uasset *.umap` + raw binary imports
+- First-commit rule: ignore/attributes committed alone, before content
+- `Content/Maps/Sandbox` — prototype slab, Editor Startup + Game Default map;
+  landfill-in-waiting, commits deliberate (binary, no diff)
+- `LifecycleProbe` class — permanent Sandbox resident, throttled Tick;
+  working reference for lifecycle overrides
+- Copyright notice set in Project Settings → writes `DefaultGame.ini`;
+  retroactive-never (existing files swept by hand)
+- Split-commit hygiene: unrelated changes = separate commits
+- `ChimeraCharacter` (C++, parent Character) — the player class; PossessedBy/
+  UnPossessed logging in place; grows into the real player per `0.5-design.md`
+- `ChimeraGameMode` (C++, parent GameModeBase) — DefaultPawnClass rule;
+  installed as project default via Maps & Modes
+- Console gotcha: no stock `possess` command in UE5; unknown commands fail
+  *silently* — no response usually means no such command
 
 ## Open threads
 
-- Concept ledger to be minted at first close-out — **note: four chapters have now closed
-  conversationally without it; decide at next session whether to backfill or start
-  ledger from chapter 5 forward**
+- **`0.2-ticket-schema.md` missing from project knowledge** — needs re-upload
+  before Part A generator design work
 - Part A generator skill design conversation still pending (flagged two sessions ago)
-- Ticket/GitHub-issue delivery not yet in use — structure adopting through use
 - Lore (Epic's VCS) parked as "worth evaluating someday"
-- Reusable actor classes (Blueprint vs C++) — flagged as the natural question after
-  the hand-built lamp post; lands in Part III
+- Audio hum for the lamp post pocketed for `systems.audio` (Management need not know)
