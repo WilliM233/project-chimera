@@ -2,10 +2,10 @@
 
 
 #include "ChimeraGameMode.h"
-#include "ChimeraCharacter.h"
+#include "ChimeraPlayerPawn.h"
 
 AChimeraGameMode::AChimeraGameMode()
 {
-	DefaultPawnClass = AChimeraCharacter::StaticClass();
+	DefaultPawnClass = AChimeraPlayerPawn::StaticClass();
 }
 
