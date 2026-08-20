@@ -4,14 +4,20 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
+#include "MoverSimulationTypes.h"
 #include "ChimeraPlayerPawn.generated.h"
 
 class UCapsuleComponent;
 class UCharacterMoverComponent;
 class UMoverNetworkPredictionLiaisonComponent;
+class USpringArmComponent;
+class UCameraComponent;
+class UInputAction;
+
+struct FInputActionValue;
 
 UCLASS()
-class CHIMERA_API AChimeraPlayerPawn : public APawn
+class CHIMERA_API AChimeraPlayerPawn : public APawn, public IMoverInputProducerInterface
 {
 	GENERATED_BODY()
 
@@ -28,10 +34,25 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, Category = "Chimera|Movement")
 	TObjectPtr<UCharacterMoverComponent> Mover;
-
 	UPROPERTY(VisibleAnywhere, Category = "Chimera|Movement")
 	TObjectPtr<UMoverNetworkPredictionLiaisonComponent> MoverBackend;
 
+	UPROPERTY(VisibleAnywhere, Category = "Chimera|Camera")
+	TObjectPtr<USpringArmComponent> SpringArm;
+	UPROPERTY(VisibleAnywhere, Category = "Chimera|Camera")
+	TObjectPtr<UCameraComponent> Camera;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Chimera|Input")
+	TObjectPtr<UInputAction> MoveAction;
+	UPROPERTY(EditDefaultsOnly, Category = "Chimera|Input")
+	TObjectPtr<UInputAction> LookAction;
+	
+	void OnMove(const FInputActionValue& Value);
+	void OnLook(const FInputActionValue& Value);
+
+	FVector2D CachedMoveInput = FVector2D::ZeroVector;
+
+	virtual void ProduceInput_Implementation(int32 SimTimeMs, FMoverInputCmdContext& InputCmdResult) override;
 
 public:	
 	// Called every frame
@@ -39,5 +60,4 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
 };
