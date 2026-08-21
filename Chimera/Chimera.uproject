@@ -30,10 +30,6 @@
 			"Enabled": true
 		},
 		{
-			"Name": "MoverExamples",
-			"Enabled": true
-		},
-		{
 			"Name": "MetaHumanCharacter",
 			"Enabled": true
 		}
