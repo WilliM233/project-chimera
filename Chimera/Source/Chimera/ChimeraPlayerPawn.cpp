@@ -12,47 +12,78 @@
 #include "Components/LODSyncComponent.h"
 #include "MetaHumanComponentUE.h"
 
+// Capsule sized to the MetaHuman body mesh (~177.4cm tall). Half-height drives the body mesh offset below - change one and the other follows.
 static constexpr float CapsuleHalfHeight = 88.7f;
-static constexpr float CapsuleRadius = 34.f;
 
-// Sets default values
+// Widen if shoulders clip through walls; the mannequin's 34 is only a starting point.
+static constexpr float CapsuleRadius = 34.f; 
+
+// Third-person follow distance.
+static constexpr float SpringArmLength = 300.f;
+
+// MetaHuman skeletons face -Y; Unreal's forward is +X. This rotates the mesh to match.
+static constexpr float MeshForwardYaw = -90.f;
+
+// The MetaHuman body has 4 LODs; the face and grooms have 8. LODSync drives everything from the body's count so they never fall out of step.
+static constexpr int32 BodyLODCount = 4;
+
 AChimeraPlayerPawn::AChimeraPlayerPawn()
 {
- 	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = false;
-
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationRoll = false;
+
+	// Mover replicates movement through its own network model, so actor-level movement replication would fight it.
 	SetReplicateMovement(false);
 
+	// --- Hierarchy: order matters. The root must exist before anything attaches to it, and VisualRoot before anything attaches beneath it.
+	// Reordering these compiles fine and silently produces a broken hierarchy.
+
+	// The capsule is Mover's updated component: what actually moves and collides.
+	// It advances in discrete simulation steps, so it is deliberately NOT what the camera or mesh hang from.
 	Capsule = CreateDefaultSubobject<UCapsuleComponent>(TEXT("Capsule"));
 	Capsule->InitCapsuleSize(CapsuleRadius, CapsuleHalfHeight);
 	Capsule->SetCollisionProfileName(TEXT("Pawn"));
 	RootComponent = Capsule;
 
+	// Mover writes its smoothing offset here (see SetPrimaryVisualComponent in BeginPlay).
+	// Everything visual sits underneath so mesh and camera share one interpolated transform.
+	// Empty and identity by design - do not delete: without it the camera rides the stepped capsule and the whole view judders.
 	VisualRoot = CreateDefaultSubobject<USceneComponent>(TEXT("VisualRoot"));
 	VisualRoot->SetupAttachment(RootComponent);
 
+	// On VisualRoot rather than Body: needs the smoothed transform,
+	// but hanging it off the mesh would make the camera inherit animation bob.
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArm->SetupAttachment(VisualRoot);
-	SpringArm->TargetArmLength = 300.f;
+	SpringArm->TargetArmLength = SpringArmLength;
+
+	// Mouse look drives the arm; the camera just rides the socket.
 	SpringArm->bUsePawnControlRotation = true;
 
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
 	Camera->bUsePawnControlRotation = false;
 
+
 	Body = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Body"));
 	Body->SetupAttachment(VisualRoot);
-	Body->SetRelativeLocation(FVector(0.f, 0.f, -CapsuleHalfHeight));
-	Body->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
 
+	// Expressed as a relationship, not a number: feet sit at the capsule's bottom,
+	// so resizing the capsule keeps the mesh grounded. Don't flatten to a literal.
+	Body->SetRelativeLocation(FVector(0.f, 0.f, -CapsuleHalfHeight));
+	Body->SetRelativeRotation(FRotator(0.f, MeshForwardYaw, 0.f));
+
+	// Deliberately bare. The MetaHuman component finds Body and Face by component
+	// name at registration and wires the face rig itself - no leader pose, 
+	// the facial skeleton isn't a subset of the body's.
 	Face = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Face"));
 	Face->SetupAttachment(Body);
 
+	// Both components resolve their targets by component name, so renaming the
+	// Body or Face subobjects silently breaks them.
 	LODSync = CreateDefaultSubobject<ULODSyncComponent>(TEXT("LODSync"));
-	LODSync->NumLODs = 4;
+	LODSync->NumLODs = BodyLODCount;
 
 	FComponentSync BodySync;
 	BodySync.Name = TEXT("Body");
@@ -64,27 +95,22 @@ AChimeraPlayerPawn::AChimeraPlayerPawn()
 	FaceSync.SyncOption = ESyncOption::Drive;
 	LODSync->ComponentsToSync.Add(FaceSync);
 
+	// Grooms join here later; Epic maps each with LODs [1, 3, 5, 7].
+
 	MetaHuman = CreateDefaultSubobject<UMetaHumanComponentUE>(TEXT("MetaHuman"));
 
 	Mover = CreateDefaultSubobject<UCharacterMoverComponent>(TEXT("Mover"));
 	MoverBackend = CreateDefaultSubobject<UMoverNetworkPredictionLiaisonComponent>(TEXT("MoverBackend"));
 }
 
-// Called when the game starts or when spawned
 void AChimeraPlayerPawn::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// Must happen after Mover registers; setting it in the constructor doesn't take.
 	Mover->SetPrimaryVisualComponent(VisualRoot);
 }
 
-// Called every frame
-void AChimeraPlayerPawn::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-}
-
-// Called to bind functionality to input
 void AChimeraPlayerPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
@@ -100,7 +126,6 @@ void AChimeraPlayerPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 void AChimeraPlayerPawn::OnMove(const FInputActionValue& Value)
 {
 	CachedMoveInput = Value.Get<FVector2D>();
-	//UE_LOG(LogTemp, Log, TEXT("Move: %s (size %.2f)"), *CachedMoveInput.ToString(), CachedMoveInput.Size());
 }
 
 void AChimeraPlayerPawn::OnMoveCompleted(const FInputActionValue& Value)
@@ -113,17 +138,18 @@ void AChimeraPlayerPawn::OnLook(const FInputActionValue& Value)
 	const FVector2D LookInput = Value.Get<FVector2D>();
 	AddControllerYawInput(LookInput.X);
 	AddControllerPitchInput(-LookInput.Y);
-	//UE_LOG(LogTemp, Log, TEXT("Look: %s"), *CachedLookInput.ToString());
 }
 
 void AChimeraPlayerPawn::ProduceInput_Implementation(int32 SimTimeMs, FMoverInputCmdContext& InputCmdResult)
 {
 	FCharacterDefaultInputs& Inputs = InputCmdResult.InputCollection.FindOrAddMutableDataByType<FCharacterDefaultInputs>();
 
-	// Camera yaw only
+	// Camera Yaw only - pitch in the basis would tilt movement into the ground when looking down.
 	const FRotator ControlYaw(0.f, GetControlRotation().Yaw, 0.f);
-	const FVector Forward = FRotationMatrix(ControlYaw).GetUnitAxis(EAxis::X);
-	const FVector Right	  = FRotationMatrix(ControlYaw).GetUnitAxis(EAxis::Y);
+	const FRotationMatrix YawMatrix(ControlYaw);
+
+	const FVector Forward = YawMatrix.GetUnitAxis(EAxis::X);
+	const FVector Right	  = YawMatrix.GetUnitAxis(EAxis::Y);
 
 	// Magnitude preserved for analog sticks.
 	const FVector WorldIntent = (Forward * CachedMoveInput.Y) + (Right * CachedMoveInput.X);
