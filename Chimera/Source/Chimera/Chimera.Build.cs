@@ -8,7 +8,7 @@ public class Chimera : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "Mover", "NetworkPrediction" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "Mover", "NetworkPrediction", "MetaHumanSDKRuntime" });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 

@@ -13,6 +13,9 @@ class UMoverNetworkPredictionLiaisonComponent;
 class USpringArmComponent;
 class UCameraComponent;
 class UInputAction;
+class USkeletalMeshComponent;
+class ULODSyncComponent;
+class UMetaHumanComponentUE;
 
 struct FInputActionValue;
 
@@ -29,7 +32,7 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-	UPROPERTY(VisibleAnywhere, Category = "Chimera|Components")
+	UPROPERTY(VisibleAnywhere, Category = "Chimera|Movement")
 	TObjectPtr<UCapsuleComponent> Capsule;
 
 	UPROPERTY(VisibleAnywhere, Category = "Chimera|Movement")
@@ -41,13 +44,25 @@ protected:
 	TObjectPtr<USpringArmComponent> SpringArm;
 	UPROPERTY(VisibleAnywhere, Category = "Chimera|Camera")
 	TObjectPtr<UCameraComponent> Camera;
+	UPROPERTY(VisibleAnywhere, Category = "Chimera|Camera")
+	TObjectPtr<USceneComponent> VisualRoot;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Chimera|Input")
 	TObjectPtr<UInputAction> MoveAction;
 	UPROPERTY(EditDefaultsOnly, Category = "Chimera|Input")
 	TObjectPtr<UInputAction> LookAction;
+
+	UPROPERTY(VisibleAnywhere, Category = "Chimera|Appearance")
+	TObjectPtr<USkeletalMeshComponent> Body;
+	UPROPERTY(VisibleAnywhere, Category = "Chimera|Appearance")
+	TObjectPtr<USkeletalMeshComponent> Face;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Chimera|Appearance")
+	TObjectPtr<ULODSyncComponent> LODSync;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Chimera|Appearance")
+	TObjectPtr<UMetaHumanComponentUE> MetaHuman;
 	
 	void OnMove(const FInputActionValue& Value);
+	void OnMoveCompleted(const FInputActionValue& Value);
 	void OnLook(const FInputActionValue& Value);
 
 	FVector2D CachedMoveInput = FVector2D::ZeroVector;

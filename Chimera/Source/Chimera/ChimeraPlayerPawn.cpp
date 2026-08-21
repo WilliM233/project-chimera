@@ -9,6 +9,11 @@
 #include "Camera/CameraComponent.h"
 #include "EnhancedInputComponent.h"
 #include "InputActionValue.h"
+#include "Components/LODSyncComponent.h"
+#include "MetaHumanComponentUE.h"
+
+static constexpr float CapsuleHalfHeight = 88.7f;
+static constexpr float CapsuleRadius = 34.f;
 
 // Sets default values
 AChimeraPlayerPawn::AChimeraPlayerPawn()
@@ -22,18 +27,44 @@ AChimeraPlayerPawn::AChimeraPlayerPawn()
 	SetReplicateMovement(false);
 
 	Capsule = CreateDefaultSubobject<UCapsuleComponent>(TEXT("Capsule"));
-	Capsule->InitCapsuleSize(34.f, 88.f);
+	Capsule->InitCapsuleSize(CapsuleRadius, CapsuleHalfHeight);
 	Capsule->SetCollisionProfileName(TEXT("Pawn"));
 	RootComponent = Capsule;
 
+	VisualRoot = CreateDefaultSubobject<USceneComponent>(TEXT("VisualRoot"));
+	VisualRoot->SetupAttachment(RootComponent);
+
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
-	SpringArm->SetupAttachment(RootComponent);
+	SpringArm->SetupAttachment(VisualRoot);
 	SpringArm->TargetArmLength = 300.f;
 	SpringArm->bUsePawnControlRotation = true;
 
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
 	Camera->bUsePawnControlRotation = false;
+
+	Body = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Body"));
+	Body->SetupAttachment(VisualRoot);
+	Body->SetRelativeLocation(FVector(0.f, 0.f, -CapsuleHalfHeight));
+	Body->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
+
+	Face = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Face"));
+	Face->SetupAttachment(Body);
+
+	LODSync = CreateDefaultSubobject<ULODSyncComponent>(TEXT("LODSync"));
+	LODSync->NumLODs = 4;
+
+	FComponentSync BodySync;
+	BodySync.Name = TEXT("Body");
+	BodySync.SyncOption = ESyncOption::Drive;
+	LODSync->ComponentsToSync.Add(BodySync);
+
+	FComponentSync FaceSync;
+	FaceSync.Name = TEXT("Face");
+	FaceSync.SyncOption = ESyncOption::Drive;
+	LODSync->ComponentsToSync.Add(FaceSync);
+
+	MetaHuman = CreateDefaultSubobject<UMetaHumanComponentUE>(TEXT("MetaHuman"));
 
 	Mover = CreateDefaultSubobject<UCharacterMoverComponent>(TEXT("Mover"));
 	MoverBackend = CreateDefaultSubobject<UMoverNetworkPredictionLiaisonComponent>(TEXT("MoverBackend"));
@@ -43,7 +74,7 @@ AChimeraPlayerPawn::AChimeraPlayerPawn()
 void AChimeraPlayerPawn::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	Mover->SetPrimaryVisualComponent(VisualRoot);
 }
 
 // Called every frame
@@ -61,6 +92,7 @@ void AChimeraPlayerPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 	if (UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
 		EnhancedInput->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AChimeraPlayerPawn::OnMove);
+		EnhancedInput->BindAction(MoveAction, ETriggerEvent::Completed, this, &AChimeraPlayerPawn::OnMoveCompleted);
 		EnhancedInput->BindAction(LookAction, ETriggerEvent::Triggered, this, &AChimeraPlayerPawn::OnLook);
 	}
 }
@@ -69,6 +101,11 @@ void AChimeraPlayerPawn::OnMove(const FInputActionValue& Value)
 {
 	CachedMoveInput = Value.Get<FVector2D>();
 	//UE_LOG(LogTemp, Log, TEXT("Move: %s (size %.2f)"), *CachedMoveInput.ToString(), CachedMoveInput.Size());
+}
+
+void AChimeraPlayerPawn::OnMoveCompleted(const FInputActionValue& Value)
+{
+	CachedMoveInput = FVector2D::ZeroVector;
 }
 
 void AChimeraPlayerPawn::OnLook(const FInputActionValue& Value)
@@ -102,8 +139,6 @@ void AChimeraPlayerPawn::ProduceInput_Implementation(int32 SimTimeMs, FMoverInpu
 	{
 		Inputs.OrientationIntent = FVector::ZeroVector;
 	}
-
-	CachedMoveInput = FVector2D::ZeroVector;
 }
 
 
