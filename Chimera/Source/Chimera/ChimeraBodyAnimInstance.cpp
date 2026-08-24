@@ -49,7 +49,8 @@ void UChimeraBodyAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	}
 	else
 	{
-		// Airborne: ease the offsets home so landing starts from neutral.
+		// Airborne: ease offsets and rotations home, and republish, so
+		// landing starts from neutral.
 		SmoothedLeftOffsetZ = FMath::FInterpTo(SmoothedLeftOffsetZ, 0.f, DeltaSeconds, FootInterpSpeed);
 		SmoothedRightOffsetZ = FMath::FInterpTo(SmoothedRightOffsetZ, 0.f, DeltaSeconds, FootInterpSpeed);
 		SmoothedLeftRotation = FMath::RInterpTo(SmoothedLeftRotation, FRotator::ZeroRotator, DeltaSeconds, FootRotationInterpSpeed);
@@ -62,7 +63,7 @@ void UChimeraBodyAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	// Positive offsets need no pelvis help - Leg IK bends that knee instead.
 	const float TargetPelvisZ = FMath::Min3(SmoothedLeftOffsetZ, SmoothedRightOffsetZ, 0.f);
 	SmoothedPelvisZ = FMath::FInterpTo(SmoothedPelvisZ, TargetPelvisZ, DeltaSeconds, PelvisInterpSpeed);
-	PelvisOffsetZ = SmoothedPelvisZ;
+	PelvisOffset = FVector(0.f, 0.f, SmoothedPelvisZ);
 }
 
 void UChimeraBodyAnimInstance::UpdateFootIK(FName FootBone, float DeltaSeconds, float& SmoothedOffsetZ, FVector& OutOffset, FRotator& SmoothedRotation, FRotator& OutRotation)
@@ -110,9 +111,9 @@ void UChimeraBodyAnimInstance::UpdateFootIK(FName FootBone, float DeltaSeconds, 
 	if (bHit)
 	{
 		// Walkable check: a normal's Z is its dot with world up, so
-		// acos(Z) is the surface's angle from horizontal. 
-		// Steeper than walkable (riser faces, corner kisses) 
-		// Isn't ground - reject outright and stay flat rather than clamping a wall.
+		// acos(Z) is the surface's angle from horizontal. Steeper than
+		// walkable (riser faces, corner kisses) isn't ground - reject
+		// outright and stay flat rather than clamping a wall.
 		const float SurfaceAngle = FMath::RadiansToDegrees(
 			FMath::Acos(FMath::Clamp(Hit.ImpactNormal.Z, -1.f, 1.f)));
 		if (SurfaceAngle <= WalkableNormalAngle)
@@ -126,12 +127,12 @@ void UChimeraBodyAnimInstance::UpdateFootIK(FName FootBone, float DeltaSeconds, 
 	FQuat WorldDelta = FQuat::FindBetweenNormals(FVector::UpVector, GroundNormal);
 
 	// Clamp the tilt itself, not per-axis components.
+	FVector TiltAxis; float TiltAngle;
+	WorldDelta.ToAxisAndAngle(TiltAxis, TiltAngle);
 	const float MaxRadians = FMath::DegreesToRadians(MaxFootRotationDegrees);
-	if (WorldDelta.GetAngle() > MaxRadians)
+	if (TiltAngle > MaxRadians)
 	{
-		FVector Axis; float Angle;
-		WorldDelta.ToAxisAndAngle(Axis, Angle);
-		WorldDelta = FQuat(Axis, MaxRadians);
+		WorldDelta = FQuat(TiltAxis, MaxRadians);
 	}
 
 	// Re-express the world delta in the mesh component's frame - the
