@@ -41,6 +41,12 @@ protected:
     UPROPERTY(BlueprintReadOnly, Category = "Chimera|FootIK")
     FVector RightFootIKOffset = FVector::ZeroVector;
 
+    UPROPERTY(BlueprintReadOnly, Category = "Chimera|FootIK")
+    FRotator LeftFootIKRotationOffset = FRotator::ZeroRotator;
+
+    UPROPERTY(BlueprintReadOnly, Category = "Chimera|FootIK")
+    FRotator RightFootIKRotationOffset = FRotator::ZeroRotator;
+
     // Blend authority per foot: 0 = animation owns it (swing / airborne),
     // 1 = trace owns it (planted). Consumed as the Modify Bone alpha pins.
     UPROPERTY(BlueprintReadOnly, Category = "Chimera|FootIK")
@@ -77,6 +83,15 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Chimera|FootIK|Config")
     float AlphaInterpSpeed = 10.f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Chimera|FootIK|Config")
+    float MaxFootRotationDegrees = 30.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Chimera|FootIK|Config")
+    float FootRotationInterpSpeed = 10.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Chimera|FootIK|Config")
+    float WalkableNormalAngle = 45.f;
+
 private:
     UPROPERTY()
     TObjectPtr<UCharacterMoverComponent> Mover;
@@ -86,8 +101,10 @@ private:
     float SmoothedRightOffsetZ = 0.f;
     float SmoothedPelvisZ = 0.f;
 
+    FRotator SmoothedLeftRotation = FRotator::ZeroRotator;
+    FRotator SmoothedRightRotation = FRotator::ZeroRotator;
+
     // One foot's trace-and-solve; returns the smoothed values through refs.
-    void UpdateFootIK(FName FootBone, float DeltaSeconds,
-        float& SmoothedOffsetZ, FVector& OutOffset);
+    void UpdateFootIK(FName FootBone, float DeltaSeconds, float& SmoothedOffsetZ, FVector& OutOffset, FRotator& SmoothedRotation, FRotator& OutRotation);
 
 };

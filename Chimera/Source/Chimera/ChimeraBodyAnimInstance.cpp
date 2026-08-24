@@ -44,14 +44,18 @@ void UChimeraBodyAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 	if (bIsGrounded)
 	{
-		UpdateFootIK(TEXT("foot_l"), DeltaSeconds, SmoothedLeftOffsetZ, LeftFootIKOffset);
-		UpdateFootIK(TEXT("foot_r"), DeltaSeconds, SmoothedRightOffsetZ, RightFootIKOffset);
+		UpdateFootIK(TEXT("foot_l"), DeltaSeconds, SmoothedLeftOffsetZ, LeftFootIKOffset, SmoothedLeftRotation, LeftFootIKRotationOffset);
+		UpdateFootIK(TEXT("foot_r"), DeltaSeconds, SmoothedRightOffsetZ, RightFootIKOffset, SmoothedRightRotation, RightFootIKRotationOffset);
 	}
 	else
 	{
 		// Airborne: ease the offsets home so landing starts from neutral.
 		SmoothedLeftOffsetZ = FMath::FInterpTo(SmoothedLeftOffsetZ, 0.f, DeltaSeconds, FootInterpSpeed);
 		SmoothedRightOffsetZ = FMath::FInterpTo(SmoothedRightOffsetZ, 0.f, DeltaSeconds, FootInterpSpeed);
+		SmoothedLeftRotation = FMath::RInterpTo(SmoothedLeftRotation, FRotator::ZeroRotator, DeltaSeconds, FootRotationInterpSpeed);
+		SmoothedRightRotation = FMath::RInterpTo(SmoothedRightRotation, FRotator::ZeroRotator, DeltaSeconds, FootRotationInterpSpeed);
+		LeftFootIKRotationOffset = SmoothedLeftRotation;
+		RightFootIKRotationOffset = SmoothedRightRotation;
 	}
 
 	// Pelvis sinks by the most-negative offset so the low-side leg can reach.
@@ -61,7 +65,7 @@ void UChimeraBodyAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	PelvisOffsetZ = SmoothedPelvisZ;
 }
 
-void UChimeraBodyAnimInstance::UpdateFootIK(FName FootBone, float DeltaSeconds, float& SmoothedOffsetZ, FVector& OutOffset)
+void UChimeraBodyAnimInstance::UpdateFootIK(FName FootBone, float DeltaSeconds, float& SmoothedOffsetZ, FVector& OutOffset, FRotator& SmoothedRotation, FRotator& OutRotation)
 {
 	USkeletalMeshComponent* Mesh = GetSkelMeshComponent();
 	UWorld* World = GetWorld();
@@ -97,4 +101,46 @@ void UChimeraBodyAnimInstance::UpdateFootIK(FName FootBone, float DeltaSeconds, 
 	SmoothedOffsetZ = FMath::FInterpTo(SmoothedOffsetZ, OffsetZ, DeltaSeconds, FootInterpSpeed);
 
 	OutOffset = FVector(0.f, 0.f, SmoothedOffsetZ);
+
+	// -- Rotation: tilt the foot to the surface it stands on --
+	
+	// The ground's "up" under this foot. Defaults to world up,
+	// which produces zero rotation - the inert state, same as flat ground.
+	FVector GroundNormal = FVector::UpVector;
+	if (bHit)
+	{
+		// Walkable check: a normal's Z is its dot with world up, so
+		// acos(Z) is the surface's angle from horizontal. 
+		// Steeper than walkable (riser faces, corner kisses) 
+		// Isn't ground - reject outright and stay flat rather than clamping a wall.
+		const float SurfaceAngle = FMath::RadiansToDegrees(
+			FMath::Acos(FMath::Clamp(Hit.ImpactNormal.Z, -1.f, 1.f)));
+		if (SurfaceAngle <= WalkableNormalAngle)
+		{
+			GroundNormal = Hit.ImpactNormal;
+		}
+	}
+
+	// The tilt we want, as a world-space delta: whatever rotation takes
+	// world-up onto the ground's up. Flat ground: identity, inert.
+	FQuat WorldDelta = FQuat::FindBetweenNormals(FVector::UpVector, GroundNormal);
+
+	// Clamp the tilt itself, not per-axis components.
+	const float MaxRadians = FMath::DegreesToRadians(MaxFootRotationDegrees);
+	if (WorldDelta.GetAngle() > MaxRadians)
+	{
+		FVector Axis; float Angle;
+		WorldDelta.ToAxisAndAngle(Axis, Angle);
+		WorldDelta = FQuat(Axis, MaxRadians);
+	}
+
+	// Re-express the world delta in the mesh component's frame - the
+	// space the Modify Bone node applies rotation in. The conjugation
+	// is where the mesh's -90 yaw gets accounted for.
+	const FQuat CompQuat = Mesh->GetComponentQuat();
+	const FQuat ComponentDelta = CompQuat.Inverse() * WorldDelta * CompQuat;
+
+	const FRotator TargetRotation = ComponentDelta.Rotator();
+	SmoothedRotation = FMath::RInterpTo(SmoothedRotation, TargetRotation, DeltaSeconds, FootRotationInterpSpeed);
+	OutRotation = SmoothedRotation;
 }
