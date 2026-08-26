@@ -18,6 +18,7 @@ class UInputComponent;
 class USkeletalMeshComponent;
 class ULODSyncComponent;
 class UMetaHumanComponentUE;
+class UGroomComponent;
 
 struct FInputActionValue;
 
@@ -58,6 +59,18 @@ protected:
 	TObjectPtr<ULODSyncComponent> LODSync;
 	UPROPERTY(VisibleAnywhere, Category = "Chimera|Appearance")
 	TObjectPtr<UMetaHumanComponentUE> MetaHuman;
+	UPROPERTY(VisibleAnywhere, Category = "Chimera|Appearance")
+	TObjectPtr<UGroomComponent> Eyelashes;
+	UPROPERTY(VisibleAnywhere, Category = "Chimera|Appearance")
+	TObjectPtr<UGroomComponent> Eyebrows;
+	UPROPERTY(VisibleAnywhere, Category = "Chimera|Appearance")
+	TObjectPtr<UGroomComponent> Beard;
+	UPROPERTY(VisibleAnywhere, Category = "Chimera|Appearance")
+	TObjectPtr<UGroomComponent> Fuzz;
+	UPROPERTY(VisibleAnywhere, Category = "Chimera|Appearance")
+	TObjectPtr<UGroomComponent> Hair;
+	UPROPERTY(VisibleAnywhere, Category = "Chimera|Appearance")
+	TObjectPtr<UGroomComponent> Mustache;
 
 	/* Input */
 	UPROPERTY(EditDefaultsOnly, Category = "Chimera|Input")

@@ -12,6 +12,7 @@
 #include "Components/LODSyncComponent.h"
 #include "MetaHumanComponentUE.h"
 #include "DefaultMovementSet/Settings/CommonLegacyMovementSettings.h"
+#include "GroomComponent.h"
 
 // Capsule sized to the MetaHuman body mesh (~177.4cm tall). Half-height drives the body mesh offset below - change one and the other follows.
 static constexpr float CapsuleHalfHeight = 88.7f;
@@ -33,6 +34,7 @@ AChimeraPlayerPawn::AChimeraPlayerPawn()
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationRoll = false;
+
 
 	// Mover replicates movement through its own network model, so actor-level movement replication would fight it.
 	SetReplicateMovement(false);
@@ -81,6 +83,24 @@ AChimeraPlayerPawn::AChimeraPlayerPawn()
 	Face = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Face"));
 	Face->SetupAttachment(Body);
 
+	Eyelashes = CreateDefaultSubobject<UGroomComponent>(TEXT("Eyelashes"));
+	Eyelashes->SetupAttachment(Face);
+
+	Eyebrows = CreateDefaultSubobject<UGroomComponent>(TEXT("Eyebrows"));
+	Eyebrows->SetupAttachment(Face);
+
+	Beard = CreateDefaultSubobject<UGroomComponent>(TEXT("Beard"));
+	Beard->SetupAttachment(Face);
+
+	Fuzz = CreateDefaultSubobject<UGroomComponent>(TEXT("Fuzz"));
+	Fuzz->SetupAttachment(Face);
+
+	Hair = CreateDefaultSubobject<UGroomComponent>(TEXT("Hair"));
+	Hair->SetupAttachment(Face);
+
+	Mustache = CreateDefaultSubobject<UGroomComponent>(TEXT("Mustache"));
+	Mustache->SetupAttachment(Face);
+
 	// Both components resolve their targets by component name, so renaming the
 	// Body or Face subobjects silently breaks them.
 	LODSync = CreateDefaultSubobject<ULODSyncComponent>(TEXT("LODSync"));
@@ -96,7 +116,40 @@ AChimeraPlayerPawn::AChimeraPlayerPawn()
 	FaceSync.SyncOption = ESyncOption::Drive;
 	LODSync->ComponentsToSync.Add(FaceSync);
 
-	// Grooms join here later; Epic maps each with LODs [1, 3, 5, 7].
+	FComponentSync HairSync;
+	HairSync.Name = TEXT("Hair");
+	HairSync.SyncOption = ESyncOption::Passive;
+	LODSync->ComponentsToSync.Add(HairSync);
+
+	FComponentSync BeardSync;
+	BeardSync.Name = TEXT("Beard");
+	BeardSync.SyncOption = ESyncOption::Passive;
+	LODSync->ComponentsToSync.Add(BeardSync);
+
+	FComponentSync MustacheSync;
+	MustacheSync.Name = TEXT("Mustache");
+	MustacheSync.SyncOption = ESyncOption::Passive;
+	LODSync->ComponentsToSync.Add(MustacheSync);
+
+	FComponentSync EyebrowsSync;
+	EyebrowsSync.Name = TEXT("Eyebrows");
+	EyebrowsSync.SyncOption = ESyncOption::Passive;
+	LODSync->ComponentsToSync.Add(EyebrowsSync);
+
+	FComponentSync EyelashesSync;
+	EyelashesSync.Name = TEXT("Eyelashes");
+	EyelashesSync.SyncOption = ESyncOption::Passive;
+	LODSync->ComponentsToSync.Add(EyelashesSync);
+
+	// Groom LODs run 0-7 against the body's 0-3; these mappings pick which
+	// groom LOD each sync level selects, mirroring Epic's own MetaHuman BPs.
+	FLODMappingData GroomMapping;
+	GroomMapping.Mapping = { 1, 3, 5, 7 };
+	LODSync->CustomLODMapping.Add(TEXT("Hair"), GroomMapping);
+	LODSync->CustomLODMapping.Add(TEXT("Beard"), GroomMapping);
+	LODSync->CustomLODMapping.Add(TEXT("Mustache"), GroomMapping);
+	LODSync->CustomLODMapping.Add(TEXT("Eyebrows"), GroomMapping);
+	LODSync->CustomLODMapping.Add(TEXT("Eyelashes"), GroomMapping);
 
 	MetaHuman = CreateDefaultSubobject<UMetaHumanComponentUE>(TEXT("MetaHuman"));
 
