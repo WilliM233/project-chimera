@@ -11,6 +11,7 @@
 #include "InputActionValue.h"
 #include "Components/LODSyncComponent.h"
 #include "MetaHumanComponentUE.h"
+#include "DefaultMovementSet/Settings/CommonLegacyMovementSettings.h"
 
 // Capsule sized to the MetaHuman body mesh (~177.4cm tall). Half-height drives the body mesh offset below - change one and the other follows.
 static constexpr float CapsuleHalfHeight = 88.7f;
@@ -109,6 +110,7 @@ void AChimeraPlayerPawn::BeginPlay()
 
 	// Must happen after Mover registers; setting it in the constructor doesn't take.
 	Mover->SetPrimaryVisualComponent(VisualRoot);
+	ApplySpeedForCurrentGait();
 }
 
 void AChimeraPlayerPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -117,9 +119,26 @@ void AChimeraPlayerPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 
 	if (UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
-		EnhancedInput->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AChimeraPlayerPawn::OnMove);
-		EnhancedInput->BindAction(MoveAction, ETriggerEvent::Completed, this, &AChimeraPlayerPawn::OnMoveCompleted);
-		EnhancedInput->BindAction(LookAction, ETriggerEvent::Triggered, this, &AChimeraPlayerPawn::OnLook);
+		EnhancedInput->BindAction(MoveAction,		ETriggerEvent::Triggered, this, &AChimeraPlayerPawn::OnMove);
+		EnhancedInput->BindAction(MoveAction,		ETriggerEvent::Completed, this, &AChimeraPlayerPawn::OnMoveCompleted);
+		EnhancedInput->BindAction(LookAction,		ETriggerEvent::Triggered, this, &AChimeraPlayerPawn::OnLook);
+		EnhancedInput->BindAction(ToggleWalkAction, ETriggerEvent::Started,	  this, &AChimeraPlayerPawn::OnWalkToggle);
+		EnhancedInput->BindAction(SpeedUpAction,	ETriggerEvent::Started,	  this, &AChimeraPlayerPawn::OnSpeedUp);
+		EnhancedInput->BindAction(SpeedUpAction,	ETriggerEvent::Completed, this, &AChimeraPlayerPawn::OnSlowDown);
+	}
+}
+
+void AChimeraPlayerPawn::ApplySpeedForCurrentGait()
+{
+	// The 2x2 gait grid resolves here and only here:
+	// gait family from bWalkMode, step-up from bSpeedUp.
+	const float NewMaxSpeed = bWalkMode
+		? (bSpeedUp ? JogMaxSpeed : WalkModeMaxSpeed)
+		: (bSpeedUp ? SprintMaxSpeed : RunModeMaxSpeed);
+
+	if (UCommonLegacyMovementSettings* Settings = Mover->FindSharedSettings_Mutable<UCommonLegacyMovementSettings>())
+	{
+		Settings->MaxSpeed = NewMaxSpeed;
 	}
 }
 
@@ -138,6 +157,24 @@ void AChimeraPlayerPawn::OnLook(const FInputActionValue& Value)
 	const FVector2D LookInput = Value.Get<FVector2D>();
 	AddControllerYawInput(LookInput.X);
 	AddControllerPitchInput(-LookInput.Y);
+}
+
+void AChimeraPlayerPawn::OnWalkToggle(const FInputActionValue& Value)
+{
+	bWalkMode = !bWalkMode;
+	ApplySpeedForCurrentGait();
+}
+
+void AChimeraPlayerPawn::OnSpeedUp(const FInputActionValue& Value)
+{
+	bSpeedUp = true;
+	ApplySpeedForCurrentGait();
+}
+
+void AChimeraPlayerPawn::OnSlowDown(const FInputActionValue& Value)
+{
+	bSpeedUp = false;
+	ApplySpeedForCurrentGait();
 }
 
 void AChimeraPlayerPawn::ProduceInput_Implementation(int32 SimTimeMs, FMoverInputCmdContext& InputCmdResult)

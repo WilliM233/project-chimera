@@ -64,10 +64,31 @@ protected:
 	TObjectPtr<UInputAction> MoveAction;
 	UPROPERTY(EditDefaultsOnly, Category = "Chimera|Input")
 	TObjectPtr<UInputAction> LookAction;
+	UPROPERTY(EditDefaultsOnly, Category = "Chimera|Input")
+	TObjectPtr<UInputAction> ToggleWalkAction;
+	UPROPERTY(EditDefaultsOnly, Category = "Chimera|Input")
+	TObjectPtr<UInputAction> SpeedUpAction;
+
+
+	UPROPERTY(EditAnywhere, Category = "Chimera|Input")
+	bool bWalkMode = false;
+	UPROPERTY(EditAnywhere, Category = "Chimera|Input")
+	bool bSpeedUp = false;
+	UPROPERTY(EditAnywhere, Category = "Chimera|Input")
+	float WalkModeMaxSpeed = 200.f;
+	UPROPERTY(EditAnywhere, Category = "Chimera|Input")
+	float RunModeMaxSpeed = 500.f;
+	UPROPERTY(EditAnywhere, Category = "Chimera|Input")
+	float JogMaxSpeed = 450.f;
+	UPROPERTY(EditAnywhere, Category = "Chimera|Input")
+	float SprintMaxSpeed = 800.f;
 	
 	void OnMove(const FInputActionValue& Value);
 	void OnMoveCompleted(const FInputActionValue& Value);
 	void OnLook(const FInputActionValue& Value);
+	void OnWalkToggle(const FInputActionValue& Value);
+	void OnSpeedUp(const FInputActionValue& Value);
+	void OnSlowDown(const FInputActionValue& Value);
 	FVector2D CachedMoveInput = FVector2D::ZeroVector;
 
 	// Seam between input layer and mover
@@ -76,4 +97,7 @@ protected:
 public:	
 
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
+
+private:
+	void ApplySpeedForCurrentGait();
 };
