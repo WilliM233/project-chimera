@@ -94,7 +94,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Chimera|Input")
 	float JogMaxSpeed = 450.f;
 	UPROPERTY(EditAnywhere, Category = "Chimera|Input")
-	float SprintMaxSpeed = 800.f;
+	float SprintMaxSpeed = 700.f;
 	
 	void OnMove(const FInputActionValue& Value);
 	void OnMoveCompleted(const FInputActionValue& Value);
