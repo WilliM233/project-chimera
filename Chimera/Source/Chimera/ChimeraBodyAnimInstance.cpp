@@ -33,6 +33,7 @@ void UChimeraBodyAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	Speed = Mover->GetVelocity().Size2D();
 	bIsAirborne = Mover->IsAirborne();
 	bIsGrounded = !bIsAirborne;
+	VerticalSpeed = Mover->GetVelocity().Z;
 
 	// --- Foot IK: conformance, not locking. Offsets are the terrain delta
 	//     under each foot relative to the character's own ground plane. On

@@ -178,6 +178,7 @@ void AChimeraPlayerPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 		EnhancedInput->BindAction(ToggleWalkAction, ETriggerEvent::Started,	  this, &AChimeraPlayerPawn::OnWalkToggle);
 		EnhancedInput->BindAction(SpeedUpAction,	ETriggerEvent::Started,	  this, &AChimeraPlayerPawn::OnSpeedUp);
 		EnhancedInput->BindAction(SpeedUpAction,	ETriggerEvent::Completed, this, &AChimeraPlayerPawn::OnSlowDown);
+		EnhancedInput->BindAction(JumpAction,		ETriggerEvent::Started,	  this, &AChimeraPlayerPawn::OnJump);
 	}
 }
 
@@ -230,6 +231,11 @@ void AChimeraPlayerPawn::OnSlowDown(const FInputActionValue& Value)
 	ApplySpeedForCurrentGait();
 }
 
+void AChimeraPlayerPawn::OnJump(const FInputActionValue& Value)
+{
+	bJumpJustPressed = true;
+}
+
 void AChimeraPlayerPawn::ProduceInput_Implementation(int32 SimTimeMs, FMoverInputCmdContext& InputCmdResult)
 {
 	FCharacterDefaultInputs& Inputs = InputCmdResult.InputCollection.FindOrAddMutableDataByType<FCharacterDefaultInputs>();
@@ -255,6 +261,12 @@ void AChimeraPlayerPawn::ProduceInput_Implementation(int32 SimTimeMs, FMoverInpu
 	{
 		Inputs.OrientationIntent = FVector::ZeroVector;
 	}
+
+	// Consume-and-clear: the press survives until the sim reads it, then
+	// exactly one sim frame sees it - regardless of how sim cadence maps
+	// to render frames.
+	Inputs.bIsJumpJustPressed = bJumpJustPressed;
+	bJumpJustPressed = false;
 }
 
 

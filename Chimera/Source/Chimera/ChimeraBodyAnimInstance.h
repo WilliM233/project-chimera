@@ -35,6 +35,10 @@ protected:
     UPROPERTY(BlueprintReadOnly, Category = "Chimera|Locomotion")
     bool bIsGrounded = true;
 
+    UPROPERTY(BlueprintReadOnly, Category = "Chimera|Locomotion")
+    float VerticalSpeed = 0.f;
+
+
     // Additive component-space offsets for the ik feet: the terrain delta
     // under each foot. Applied on top of the authored ik tracks - the
     // animation keeps the stride, we shift it vertically. Flat ground: zero.

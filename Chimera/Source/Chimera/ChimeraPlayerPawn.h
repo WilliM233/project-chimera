@@ -81,6 +81,8 @@ protected:
 	TObjectPtr<UInputAction> ToggleWalkAction;
 	UPROPERTY(EditDefaultsOnly, Category = "Chimera|Input")
 	TObjectPtr<UInputAction> SpeedUpAction;
+	UPROPERTY(EditDefaultsOnly, Category = "Chimera|Input")
+	TObjectPtr<UInputAction> JumpAction;
 
 
 	UPROPERTY(EditAnywhere, Category = "Chimera|Input")
@@ -96,12 +98,15 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Chimera|Input")
 	float SprintMaxSpeed = 700.f;
 	
+	bool bJumpJustPressed = false;
+	
 	void OnMove(const FInputActionValue& Value);
 	void OnMoveCompleted(const FInputActionValue& Value);
 	void OnLook(const FInputActionValue& Value);
 	void OnWalkToggle(const FInputActionValue& Value);
 	void OnSpeedUp(const FInputActionValue& Value);
 	void OnSlowDown(const FInputActionValue& Value);
+	void OnJump(const FInputActionValue& Value);
 	FVector2D CachedMoveInput = FVector2D::ZeroVector;
 
 	// Seam between input layer and mover
