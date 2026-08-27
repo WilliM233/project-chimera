@@ -22,6 +22,33 @@ class UGroomComponent;
 
 struct FInputActionValue;
 
+USTRUCT(BlueprintType)
+struct FCameraFraming
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, Category = "Chimera|Camera")
+	float TargetArmLength = 300.f;
+
+	// Profile intent; the global envelope in Tick has final say.
+	UPROPERTY(EditAnywhere, Category = "Chimera|Camera")
+	float PitchMin = -60.f;
+
+	UPROPERTY(EditAnywhere, Category = "Chimera|Camera")
+	float PitchMax = 55.f;
+
+	// Screen-space nudge at the camera end: Y = right, Z = up.
+	UPROPERTY(EditAnywhere, Category = "Chimera|Camera")
+	FVector SocketOffset = FVector::ZeroVector;
+};
+
+UENUM()
+enum class ECameraDriverMode : uint8
+{
+	GaitDriven,
+	Manual
+};
+
 UCLASS()
 class CHIMERA_API AChimeraPlayerPawn : public APawn, public IMoverInputProducerInterface
 {
@@ -49,6 +76,24 @@ protected:
 	TObjectPtr<USpringArmComponent> SpringArm;
 	UPROPERTY(VisibleAnywhere, Category = "Chimera|Camera")
 	TObjectPtr<UCameraComponent> Camera;
+
+	UPROPERTY(EditAnywhere, Category = "Chimera|Camera")
+	FCameraFraming WalkFraming{ 220.f, -50.f, 45.f, FVector(0.f, 50.f, 12.f) };
+	UPROPERTY(EditAnywhere, Category = "Chimera|Camera")
+	FCameraFraming JogFraming{ 280.f, -55.f, 50.f, FVector(0.f, 40.f, 10.f) };
+	UPROPERTY(EditAnywhere, Category = "Chimera|Camera")
+	FCameraFraming RunFraming{ 340.f, -60.f, 55.f, FVector(0.f, 25.f, 6.f) };
+	UPROPERTY(EditAnywhere, Category = "Chimera|Camera")
+	FCameraFraming SprintFraming{ 420.f, -70.f, 60.f, FVector(0.f, 0.f, 0.f) };
+
+	// The law. Profiles express intent; nothing escapes these.
+	UPROPERTY(EditAnywhere, Category = "Chimera|Camera")
+	float GlobalPitchMin = -75.f;
+	UPROPERTY(EditAnywhere, Category = "Chimera|Camera")
+	float GlobalPitchMax = 70.f;
+
+	UPROPERTY(EditAnywhere, Category = "Chimera|Camera")
+	float FramingInterpSpeed = 5.f;
 
 	/* Appearance */
 	UPROPERTY(VisibleAnywhere, Category = "Chimera|Appearance")
@@ -83,6 +128,8 @@ protected:
 	TObjectPtr<UInputAction> SpeedUpAction;
 	UPROPERTY(EditDefaultsOnly, Category = "Chimera|Input")
 	TObjectPtr<UInputAction> JumpAction;
+	UPROPERTY(EditDefaultsOnly, Category = "Chimera|Input")
+	TObjectPtr<UInputAction> CycleCameraAction;
 
 
 	UPROPERTY(EditAnywhere, Category = "Chimera|Input")
@@ -107,7 +154,14 @@ protected:
 	void OnSpeedUp(const FInputActionValue& Value);
 	void OnSlowDown(const FInputActionValue& Value);
 	void OnJump(const FInputActionValue& Value);
+	void OnCycleCamera(const FInputActionValue& Value);
+	virtual void Tick(float DeltaSeconds) override;
 	FVector2D CachedMoveInput = FVector2D::ZeroVector;
+	FCameraFraming CurrentFraming;
+	FCameraFraming TargetFraming;
+	ECameraDriverMode CameraDriverMode = ECameraDriverMode::GaitDriven;
+	int32 ManualFramingIndex = 0;
+
 
 	// Seam between input layer and mover
 	virtual void ProduceInput_Implementation(int32 SimTimeMs, FMoverInputCmdContext& InputCmdResult) override;
@@ -117,5 +171,5 @@ public:
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
 private:
-	void ApplySpeedForCurrentGait();
+	void ApplyGaitSettings();
 };

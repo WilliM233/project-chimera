@@ -31,6 +31,8 @@ static constexpr int32 BodyLODCount = 4;
 
 AChimeraPlayerPawn::AChimeraPlayerPawn()
 {
+	PrimaryActorTick.bCanEverTick = true;
+
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationRoll = false;
@@ -163,7 +165,8 @@ void AChimeraPlayerPawn::BeginPlay()
 
 	// Must happen after Mover registers; setting it in the constructor doesn't take.
 	Mover->SetPrimaryVisualComponent(VisualRoot);
-	ApplySpeedForCurrentGait();
+	ApplyGaitSettings();
+	CurrentFraming = TargetFraming;
 }
 
 void AChimeraPlayerPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -172,17 +175,18 @@ void AChimeraPlayerPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 
 	if (UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
-		EnhancedInput->BindAction(MoveAction,		ETriggerEvent::Triggered, this, &AChimeraPlayerPawn::OnMove);
-		EnhancedInput->BindAction(MoveAction,		ETriggerEvent::Completed, this, &AChimeraPlayerPawn::OnMoveCompleted);
-		EnhancedInput->BindAction(LookAction,		ETriggerEvent::Triggered, this, &AChimeraPlayerPawn::OnLook);
-		EnhancedInput->BindAction(ToggleWalkAction, ETriggerEvent::Started,	  this, &AChimeraPlayerPawn::OnWalkToggle);
-		EnhancedInput->BindAction(SpeedUpAction,	ETriggerEvent::Started,	  this, &AChimeraPlayerPawn::OnSpeedUp);
-		EnhancedInput->BindAction(SpeedUpAction,	ETriggerEvent::Completed, this, &AChimeraPlayerPawn::OnSlowDown);
-		EnhancedInput->BindAction(JumpAction,		ETriggerEvent::Started,	  this, &AChimeraPlayerPawn::OnJump);
+		EnhancedInput->BindAction(MoveAction,		 ETriggerEvent::Triggered, this, &AChimeraPlayerPawn::OnMove);
+		EnhancedInput->BindAction(MoveAction,		 ETriggerEvent::Completed, this, &AChimeraPlayerPawn::OnMoveCompleted);
+		EnhancedInput->BindAction(LookAction,		 ETriggerEvent::Triggered, this, &AChimeraPlayerPawn::OnLook);
+		EnhancedInput->BindAction(ToggleWalkAction,  ETriggerEvent::Started,   this, &AChimeraPlayerPawn::OnWalkToggle);
+		EnhancedInput->BindAction(SpeedUpAction,	 ETriggerEvent::Started,   this, &AChimeraPlayerPawn::OnSpeedUp);
+		EnhancedInput->BindAction(SpeedUpAction,	 ETriggerEvent::Completed, this, &AChimeraPlayerPawn::OnSlowDown);
+		EnhancedInput->BindAction(JumpAction,		 ETriggerEvent::Started,   this, &AChimeraPlayerPawn::OnJump);
+		EnhancedInput->BindAction(CycleCameraAction, ETriggerEvent::Started,   this, &AChimeraPlayerPawn::OnCycleCamera);
 	}
 }
 
-void AChimeraPlayerPawn::ApplySpeedForCurrentGait()
+void AChimeraPlayerPawn::ApplyGaitSettings()
 {
 	// The 2x2 gait grid resolves here and only here:
 	// gait family from bWalkMode, step-up from bSpeedUp.
@@ -193,6 +197,14 @@ void AChimeraPlayerPawn::ApplySpeedForCurrentGait()
 	if (UCommonLegacyMovementSettings* Settings = Mover->FindSharedSettings_Mutable<UCommonLegacyMovementSettings>())
 	{
 		Settings->MaxSpeed = NewMaxSpeed;
+	}
+
+	// Same two bools, second consumer. Manual mode owns the target instead.
+	if (CameraDriverMode == ECameraDriverMode::GaitDriven)
+	{
+		TargetFraming = bWalkMode
+			? (bSpeedUp ? JogFraming : WalkFraming)
+			: (bSpeedUp ? SprintFraming : RunFraming);
 	}
 }
 
@@ -216,24 +228,64 @@ void AChimeraPlayerPawn::OnLook(const FInputActionValue& Value)
 void AChimeraPlayerPawn::OnWalkToggle(const FInputActionValue& Value)
 {
 	bWalkMode = !bWalkMode;
-	ApplySpeedForCurrentGait();
+	ApplyGaitSettings();
 }
 
 void AChimeraPlayerPawn::OnSpeedUp(const FInputActionValue& Value)
 {
 	bSpeedUp = true;
-	ApplySpeedForCurrentGait();
+	ApplyGaitSettings();
 }
 
 void AChimeraPlayerPawn::OnSlowDown(const FInputActionValue& Value)
 {
 	bSpeedUp = false;
-	ApplySpeedForCurrentGait();
+	ApplyGaitSettings();
 }
 
 void AChimeraPlayerPawn::OnJump(const FInputActionValue& Value)
 {
 	bJumpJustPressed = true;
+}
+
+void AChimeraPlayerPawn::OnCycleCamera(const FInputActionValue& Value)
+{
+	if (CameraDriverMode == ECameraDriverMode::GaitDriven)
+	{
+		CameraDriverMode = ECameraDriverMode::Manual;
+		ManualFramingIndex = 0;
+	}
+	else if (++ManualFramingIndex > 3)
+	{
+		CameraDriverMode = ECameraDriverMode::GaitDriven;
+		ApplyGaitSettings();
+		return;
+	}
+
+	const FCameraFraming* Profiles[4] = { &WalkFraming, &JogFraming, &RunFraming, &SprintFraming };
+	TargetFraming = *Profiles[ManualFramingIndex];
+}
+
+void AChimeraPlayerPawn::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	CurrentFraming.TargetArmLength = FMath::FInterpTo(CurrentFraming.TargetArmLength, TargetFraming.TargetArmLength, DeltaSeconds, FramingInterpSpeed);
+	CurrentFraming.PitchMin = FMath::FInterpTo(CurrentFraming.PitchMin, TargetFraming.PitchMin, DeltaSeconds, FramingInterpSpeed);
+	CurrentFraming.PitchMax = FMath::FInterpTo(CurrentFraming.PitchMax, TargetFraming.PitchMax, DeltaSeconds, FramingInterpSpeed);
+	CurrentFraming.SocketOffset = FMath::VInterpTo(CurrentFraming.SocketOffset, TargetFraming.SocketOffset, DeltaSeconds, FramingInterpSpeed);
+
+	SpringArm->TargetArmLength = CurrentFraming.TargetArmLength;
+	SpringArm->SocketOffset = CurrentFraming.SocketOffset;
+
+	if (APlayerController* PC = GetController<APlayerController>())
+	{
+		if (PC->PlayerCameraManager)
+		{
+			PC->PlayerCameraManager->ViewPitchMin = FMath::Max(CurrentFraming.PitchMin, GlobalPitchMin);
+			PC->PlayerCameraManager->ViewPitchMax = FMath::Min(CurrentFraming.PitchMax, GlobalPitchMax);
+		}
+	}
 }
 
 void AChimeraPlayerPawn::ProduceInput_Implementation(int32 SimTimeMs, FMoverInputCmdContext& InputCmdResult)
