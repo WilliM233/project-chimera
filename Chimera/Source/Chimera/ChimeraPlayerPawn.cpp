@@ -14,8 +14,9 @@
 #include "DefaultMovementSet/Settings/CommonLegacyMovementSettings.h"
 #include "GroomComponent.h"
 
-// Capsule sized to the MetaHuman body mesh (~177.4cm tall). Half-height drives the body mesh offset below - change one and the other follows.
-static constexpr float CapsuleHalfHeight = 88.7f;
+// Reference body: MHC_Chimera_Neutral_Average, 171.63cm (see chimera-body-set-spec.md).
+static constexpr float ReferenceBodyHeight = 171.63f;
+static constexpr float CapsuleHalfHeight = ReferenceBodyHeight * 0.5f;
 
 // Widen if shoulders clip through walls; the mannequin's 34 is only a starting point.
 static constexpr float CapsuleRadius = 34.f; 

@@ -137,13 +137,13 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Chimera|Input")
 	bool bSpeedUp = false;
 	UPROPERTY(EditAnywhere, Category = "Chimera|Input")
-	float WalkModeMaxSpeed = 200.f;
+	float WalkModeMaxSpeed = 165.f;
 	UPROPERTY(EditAnywhere, Category = "Chimera|Input")
-	float RunModeMaxSpeed = 500.f;
+	float RunModeMaxSpeed = 375.f;
 	UPROPERTY(EditAnywhere, Category = "Chimera|Input")
-	float JogMaxSpeed = 450.f;
+	float JogMaxSpeed = 340.f;
 	UPROPERTY(EditAnywhere, Category = "Chimera|Input")
-	float SprintMaxSpeed = 700.f;
+	float SprintMaxSpeed = 585.f;
 	
 	bool bJumpJustPressed = false;
 	
