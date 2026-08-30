@@ -191,9 +191,19 @@ void AChimeraPlayerPawn::ApplyGaitSettings()
 {
 	// The 2x2 gait grid resolves here and only here:
 	// gait family from bWalkMode, step-up from bSpeedUp.
-	const float NewMaxSpeed = bWalkMode
-		? (bSpeedUp ? JogMaxSpeed : WalkModeMaxSpeed)
-		: (bSpeedUp ? SprintMaxSpeed : RunModeMaxSpeed);
+	CurrentGait = bWalkMode
+		? (bSpeedUp ? EChimeraGait::Jog : EChimeraGait::Walk)
+		: (bSpeedUp ? EChimeraGait::Sprint : EChimeraGait::Run);
+
+	float NewMaxSpeed = RunModeMaxSpeed;
+	const FCameraFraming* NewFraming = &RunFraming;
+	switch (CurrentGait)
+	{
+		case EChimeraGait::Walk:   NewMaxSpeed = WalkModeMaxSpeed; NewFraming = &WalkFraming;   break;
+		case EChimeraGait::Jog:    NewMaxSpeed = JogMaxSpeed;	   NewFraming = &JogFraming;    break;
+		case EChimeraGait::Run:	   NewMaxSpeed = RunModeMaxSpeed;  NewFraming = &RunFraming;    break;
+		case EChimeraGait::Sprint: NewMaxSpeed = SprintMaxSpeed;   NewFraming = &SprintFraming; break;
+	}
 
 	if (UCommonLegacyMovementSettings* Settings = Mover->FindSharedSettings_Mutable<UCommonLegacyMovementSettings>())
 	{
@@ -203,9 +213,7 @@ void AChimeraPlayerPawn::ApplyGaitSettings()
 	// Same two bools, second consumer. Manual mode owns the target instead.
 	if (CameraDriverMode == ECameraDriverMode::GaitDriven)
 	{
-		TargetFraming = bWalkMode
-			? (bSpeedUp ? JogFraming : WalkFraming)
-			: (bSpeedUp ? SprintFraming : RunFraming);
+		TargetFraming = *NewFraming;
 	}
 }
 

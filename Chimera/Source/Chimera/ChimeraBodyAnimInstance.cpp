@@ -6,6 +6,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/World.h"
 #include "CollisionQueryParams.h"
+#include "ChimeraPlayerPawn.h"
 
 void UChimeraBodyAnimInstance::NativeInitializeAnimation()
 {
@@ -15,9 +16,10 @@ void UChimeraBodyAnimInstance::NativeInitializeAnimation()
 	// works on any actor class, and returns null without complaint on actors
 	// that have no Mover (preview windows, placed statues). Null is a legal
 	// state here - every consumer checks before use
-	if (const AActor* Owner = GetOwningActor())
+	if (AActor* Owner = GetOwningActor())
 	{
 		Mover = Owner->FindComponentByClass<UCharacterMoverComponent>();
+		Pawn = Cast<AChimeraPlayerPawn>(Owner);
 	}
 }
 
@@ -34,6 +36,12 @@ void UChimeraBodyAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	bIsAirborne = Mover->IsAirborne();
 	bIsGrounded = !bIsAirborne;
 	VerticalSpeed = Mover->GetVelocity().Z;
+
+	if (Pawn)
+	{
+		Gait = Pawn->GetCurrentGait();
+	}
+	bIsMoving = Speed > MovingSpeedThreshold;
 
 	// --- Foot IK: conformance, not locking. Offsets are the terrain delta
 	//     under each foot relative to the character's own ground plane. On

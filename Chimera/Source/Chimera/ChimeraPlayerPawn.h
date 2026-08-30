@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
 #include "MoverSimulationTypes.h"
+#include "ChimeraTypes.h"
 #include "ChimeraPlayerPawn.generated.h"
 
 class UCapsuleComponent;
@@ -161,7 +162,7 @@ protected:
 	FCameraFraming TargetFraming;
 	ECameraDriverMode CameraDriverMode = ECameraDriverMode::GaitDriven;
 	int32 ManualFramingIndex = 0;
-
+	EChimeraGait CurrentGait = EChimeraGait::Jog;
 
 	// Seam between input layer and mover
 	virtual void ProduceInput_Implementation(int32 SimTimeMs, FMoverInputCmdContext& InputCmdResult) override;
@@ -169,6 +170,9 @@ protected:
 public:	
 
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
+
+	UFUNCTION(BlueprintPure, Category = "Chimera|Locomotion")
+	EChimeraGait GetCurrentGait() const { return CurrentGait; }
 
 private:
 	void ApplyGaitSettings();

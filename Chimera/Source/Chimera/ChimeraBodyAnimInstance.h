@@ -4,10 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "Animation/AnimInstance.h"
+#include "ChimeraTypes.h"
 #include "ChimeraBodyAnimInstance.generated.h"
 
 
 class UCharacterMoverComponent;
+class AChimeraPlayerPawn;
 
 /**
  * Anim instance for the Chimera body: publishes locomotion state read from
@@ -37,6 +39,18 @@ protected:
 
     UPROPERTY(BlueprintReadOnly, Category = "Chimera|Locomotion")
     float VerticalSpeed = 0.f;
+
+    UPROPERTY(BlueprintReadOnly, Category = "Chimera|Locomotion")
+    EChimeraGait Gait = EChimeraGait::Jog;
+
+    UPROPERTY(BlueprintReadOnly, Category = "Chimera|Locomotion")
+    bool bIsMoving = false;
+
+    UPROPERTY(EditAnywhere, Category = "Chimera|Locomotion")
+    float MovingSpeedThreshold = 10.f;
+
+    UPROPERTY(Transient)
+    TObjectPtr<AChimeraPlayerPawn> Pawn = nullptr;
 
 
     // Additive component-space offsets for the ik feet: the terrain delta
